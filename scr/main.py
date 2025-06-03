@@ -93,7 +93,7 @@ while cam.IsGrabbing():
                 maxRadius=100
             )
 
-            with photopos_lock:
+            with photopos_lock: # locked var
                 current_photopos = photopos_value
 
             if circles is not None and current_photopos == 1:
@@ -129,8 +129,8 @@ while cam.IsGrabbing():
                         height = y_max - y_min
 
                         # --------------------- QR 17x17mm -----------------------
-                        robot_z = -0.4547 * width + 329.68  # linear dependancy of photo height and QR dmis
-                        ppm_x = 17 / width
+                        robot_z = -0.4547 * width + 329.68  # linear dependency of photo height and QR dimensions
+                        ppm_x = 17 / width # QR dimensions in reality are constant
                         width_mm = width * ppm_x
                         width_mm_mdb = int(np.round(width_mm))
 
@@ -154,7 +154,7 @@ while cam.IsGrabbing():
                         context[0].setValues(3, 1, [x_offs])  # Center of QR on X axis [mm]
                         context[0].setValues(3, 2, [y_offs])  # Center of QR on Y axis [mm]
                         context[0].setValues(3, 3, [center_x])  # Center of QR on X axis [px]
-                        context[0].setValues(3, 4, [center_y])  # ŚCenter of QR on Y axis [px]
+                        context[0].setValues(3, 4, [center_y])  # Center of QR on Y axis [px]
                         context[0].setValues(3, 5, [width_mm_mdb])  # Width of QR w mm
                         context[0].setValues(3, 6, [len(qr_value)])  # Length of QR text
 
