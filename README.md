@@ -27,6 +27,6 @@ This project provides a real-time image processing system for integration with t
   ```bash
   pip install opencv-python numpy pymodbus pypylon
   
-# How to use
+## How to use
 
 Run main.py
