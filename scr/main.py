@@ -109,8 +109,8 @@ while cam.IsGrabbing():
 
                     break
 
+            # elif True:  #for faster testing, without waiting for robot
             elif current_photopos == 2:
-            #elif True: # for faster testing, without waiting for robot
                 detector = cv2.QRCodeDetector()
                 retval, decoded_info, points, _ = detector.detectAndDecodeMulti(frame)
 
@@ -120,50 +120,69 @@ while cam.IsGrabbing():
                         x_coords = pts[:, 0]
                         y_coords = pts[:, 1]
 
+                        # Dimensions in px
                         x_min, x_max = np.min(x_coords), np.max(x_coords)
                         y_min, y_max = np.min(y_coords), np.max(y_coords)
-
                         center_x = int(np.mean(x_coords))
                         center_y = int(np.mean(y_coords))
-                        width = x_max - x_min
-                        height = y_max - y_min
 
-                        # --------------------- QR 17x17mm -----------------------
-                        robot_z = -0.4547 * width + 329.68  # linear dependency of photo height and QR dimensions
-                        ppm_x = 17 / width # QR dimensions in reality are constant
-                        width_mm = width * ppm_x
-                        width_mm_mdb = int(np.round(width_mm))
+                        # QR dimensions in px
+                        width_px = x_max - x_min
+                        height_px = y_max - y_min
 
-                        x_offs = int(np.round(center_x * ppm_x))
-                        y_offs = int(np.round(center_y * ppm_x))
+                        # QR dimensions in mm
+                        ppm_x = 17 / width_px
+                        width_mm = int(np.round(width_px * ppm_x))
 
-                        print(x_offs)
-                        print(y_offs)
+                        # Center of frame
+                        frame_center_x = cam.Width.Value // 2
+                        frame_center_y = cam.Height.Value // 2
 
-                        # Draw QR lines and center
+                        # Offset of QR from frame center
+                        offs_x_px = center_x - frame_center_x
+                        offs_y_px = center_y - frame_center_y
+
+                        # Offset in [mm] in Modbus format
+                        offs_x_mm = int(np.round(offs_x_px * ppm_x * 10) + 32768) # *10 to save first number after coma
+                        offs_y_mm = int(np.round(offs_y_px * ppm_x * 10) + 32768) # +32768 to send negative numbers
+
+                        # Show data in console
+                        print(f"[QR] QR value: {decoded_info[i]}")
+                        print(f"[QR] QR center: ({center_x}, {center_y})")
+                        print(f"[QR] Frame center: ({frame_center_x}, {frame_center_y})")
+                        print(f"[QR] QR offset: dx={offs_x_px} px ({offs_x_mm} mm), dy={offs_y_px} px ({offs_y_mm} mm)")
+
+                        # Marks on frame
                         cv2.polylines(frame, [pts], isClosed=True, color=(255, 0, 0), thickness=2)
                         cv2.circle(frame, (center_x, center_y), 4, (0, 255, 0), -1)
-
-                        qr_value = decoded_info[i] if i < len(decoded_info) else ""
-
-                        print(f"[QR] Value: {qr_value}")
-                        print(f"[QR] Position: ({x_min}, {y_min}), Dimensions: {width}x{height}")
-                        print(f"[QR] Center: ({center_x}, {center_y})")
+                        cv2.circle(frame, (frame_center_x, frame_center_y), 4, (0, 0, 255), -1)  # środek kadru
+                        qr_value = decoded_info[i]
 
                         # Set values to Modbus registers
-                        context[0].setValues(3, 1, [x_offs])  # Center of QR on X axis [mm]
-                        context[0].setValues(3, 2, [y_offs])  # Center of QR on Y axis [mm]
-                        context[0].setValues(3, 3, [center_x])  # Center of QR on X axis [px]
-                        context[0].setValues(3, 4, [center_y])  # Center of QR on Y axis [px]
-                        context[0].setValues(3, 5, [width_mm_mdb])  # Width of QR w mm
-                        context[0].setValues(3, 6, [len(qr_value)])  # Length of QR text
+                        context[0].setValues(3, 0, [1])              # Done OK
+                        context[0].setValues(3, 1, [offs_x_mm])      # Offset X [mm]
+                        context[0].setValues(3, 2, [offs_y_mm])      # Offset Y [mm]
+                        context[0].setValues(3, 3, [center_x])       # QR center X [px]
+                        context[0].setValues(3, 4, [center_y])       # QR center Y [px]
+                        context[0].setValues(3, 5, [width_mm])       # QR width w mm
+                        context[0].setValues(3, 6, [len(qr_value)])  # QR text length
 
+                        # Show values in window
                         cv2.putText(frame, qr_value, (x_min, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX,
                                     0.5, (0, 255, 255), 1, cv2.LINE_AA)
 
                         break  # only first QR
 
-            cv2.imshow("Camera", frame)
+            else: # if no image is analyzed set registers to 0
+                context[0].setValues(3, 0, [0])  # Done OK
+                context[0].setValues(3, 1, [0])  # Offset X [mm]
+                context[0].setValues(3, 2, [0])  # Offset Y [mm]
+                context[0].setValues(3, 3, [0])  # QR center X [px]
+                context[0].setValues(3, 4, [0])  # QR center Y [px]
+                context[0].setValues(3, 5, [0])  # QR width w mm
+                context[0].setValues(3, 6, [0])  # QR text length
+
+            cv2.imshow("Camera view", frame)
 
             if cv2.waitKey(1) & 0xFF in (ord('q'), 27):
                 break
