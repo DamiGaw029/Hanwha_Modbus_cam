@@ -158,6 +158,11 @@ while cam.IsGrabbing():
                         cv2.circle(frame, (frame_center_x, frame_center_y), 4, (0, 0, 255), -1)  # środek kadru
                         qr_value = decoded_info[i]
 
+                        try:
+                            qr_int_value = int(decoded_info[0][0])
+                        except (IndexError, ValueError):
+                            qr_int_value = 0  # default value
+
                         # Set values to Modbus registers
                         context[0].setValues(3, 0, [1])              # Done OK
                         context[0].setValues(3, 1, [offs_x_mm])      # Offset X [mm]
@@ -165,7 +170,7 @@ while cam.IsGrabbing():
                         context[0].setValues(3, 3, [center_x])       # QR center X [px]
                         context[0].setValues(3, 4, [center_y])       # QR center Y [px]
                         context[0].setValues(3, 5, [width_mm])       # QR width w mm
-                        context[0].setValues(3, 6, [len(qr_value)])  # QR text length
+                        context[0].setValues(3, 6, [qr_int_value])  # QR text length
 
                         # Show values in window
                         cv2.putText(frame, qr_value, (x_min, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX,
